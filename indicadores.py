@@ -24,7 +24,7 @@ import streamlit as st
 ## Dados do IPCA (Variação Mensal, Acumulado no Ano e Acumulado em 12 Meses)
 
 data_atual = dt.datetime.now() # captura data para determinar período na consulta da API
-ipca_brasil = requests.get(f'https://apisidra.ibge.gov.br/values/t/7060/n1/all/v/63,69,2265/p/202101-{data_atual.year}{data_atual.month-1}/c315/7169/d/v63%202')
+ipca_brasil = requests.get(f'https://apisidra.ibge.gov.br/values/t/7060/n1/all/v/63,69,2265/p/202201-{data_atual.year}{data_atual.month-1}/c315/7169/d/v63%202')
 ipca_brasil = ipca_brasil.json()
 ipca_brasil = pd.DataFrame(ipca_brasil)
 
@@ -37,6 +37,16 @@ ipca_brasil['Mês (Código)'] = pd.to_datetime(ipca_brasil['Mês (Código)'], fo
 
 ipca_brasil = pd.crosstab(ipca_brasil['Mês (Código)'], ipca_brasil['Variável'], ipca_brasil['Valor'], aggfunc='sum')
 
+coluna_ordem = ['IPCA - Variação mensal', 'IPCA - Variação acumulada em 12 meses', 'IPCA - Variação acumulada no ano']
+
+ipca_brasil = ipca_brasil.reindex(coluna_ordem, axis=1)
+
+ipca_brasil_94_21 = pd.read_feather('ipca_brasil_94_21.feather')
+
+ipca_brasil_94_21.set_index('Mês', inplace=True)
+
+ipca_brasil = pd.concat([ipca_brasil_94_21, ipca_brasil], axis=0)
+
 #Datas para capturar  variação mais atual e anterior.
 
 
@@ -48,7 +58,6 @@ data_anterior = data_anterior.strftime('%Y/%m')
 
 ano_atual = dt.datetime.now().year
 meses_ano_atual = pd.date_range(start=f'{ano_atual}-01-01', end=f'{ano_atual}-12-01', freq='MS')
-df_vazio = pd.DataFrame(meses_ano_atual) #variável auxiliar para criar meses futuros no gráfico da variação acumulada.
 
 st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Indicadores Econômicos")
 
@@ -72,32 +81,33 @@ with col1:
 
 #Gráfico
 with col3:
-    # -- Get the user input
 
-        # ano_escolha = st.slider(
-        #     "Qual período deseja visualizar?",
-        #     min_value=data_referencia.year - 20,
-        #     max_value=data_referencia.year,
-        #     step=1,
-        #     value=data_referencia.year,
-        # )
+    #create a slider filter to select the year to be displayed
 
-        serie_escolha = st.selectbox(
-            "Qual variação você gostaria de visualizar?",
-            ("Todas", "Mensal", "Acumulada 12 Meses", "Acumulada no Ano"),
-        )
+    ano_inicial, ano_final = st.slider(
+        "Qual período deseja visualizar?",
+        min_value=ipca_brasil.index.min().year,
+        max_value=ipca_brasil.index.max().year,
+        step=1,
+        value=((ipca_brasil.index.max().year-5, ipca_brasil.index.max().year)),
+    )
+
+    serie_escolha = st.selectbox(
+        "Qual variação você gostaria de visualizar?",
+        ("Todas", "Mensal", "Acumulada 12 Meses", "Acumulada no Ano"),
+    )
 
 
-#filtered_df = ipca_brasil[(ipca_brasil.index >= ano_escolha)]
+filtered_df = ipca_brasil[(ipca_brasil.index.year >= ano_inicial) & (ipca_brasil.index.year <= ano_final)]
 # -- Apply the continent filter
 if serie_escolha == "Todas":
-    filtered_df = ipca_brasil[['IPCA - Variação mensal', 'IPCA - Variação acumulada em 12 meses', 'IPCA - Variação acumulada no ano']]
+    filtered_df = filtered_df[['IPCA - Variação mensal', 'IPCA - Variação acumulada em 12 meses', 'IPCA - Variação acumulada no ano']]
 elif serie_escolha == "Mensal":
-    filtered_df = ipca_brasil[['IPCA - Variação mensal']]
+    filtered_df = filtered_df[['IPCA - Variação mensal']]
 elif serie_escolha == "Acumulada 12 Meses":
-    filtered_df = ipca_brasil[['IPCA - Variação acumulada em 12 meses']]
+    filtered_df = filtered_df[['IPCA - Variação acumulada em 12 meses']]
 elif serie_escolha == "Acumulada no Ano":
-    filtered_df = ipca_brasil[['IPCA - Variação acumulada no ano']]
+    filtered_df = filtered_df[['IPCA - Variação acumulada no ano']]
 
 #Filtro
 with col2:
