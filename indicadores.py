@@ -2,7 +2,7 @@
 
 #set light theme as default e wide screen enable
 
-
+#Pacotes necessários
 
 import pandas as pd             # manipulação dos dados tabulares e scraping
 import numpy as np              # manipulação séries temporais
@@ -19,20 +19,16 @@ import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 
+#Importação de dados
 
-st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Indicadores Econômicos")
+## Dados do IPCA (Variação Mensal, Acumulado no Ano e Acumulado em 12 Meses)
 
-
-st.title('Indicadores Econômicos')
-st.subheader('**Inflação**')
-
-# Dados do IPCA
-
-data_atual = dt.datetime.now()
-
+data_atual = dt.datetime.now() # captura data para determinar período na consulta da API
 ipca_brasil = requests.get(f'https://apisidra.ibge.gov.br/values/t/7060/n1/all/v/63,69,2265/p/202101-{data_atual.year}{data_atual.month-1}/c315/7169/d/v63%202')
 ipca_brasil = ipca_brasil.json()
 ipca_brasil = pd.DataFrame(ipca_brasil)
+
+## Tratamento dos dados do IPCA (Variação Mensal, Acumulado no Ano e Acumulado em 12 Meses)
 
 ipca_brasil.columns = ipca_brasil.iloc[0] 
 ipca_brasil = ipca_brasil[1:]
@@ -43,6 +39,7 @@ ipca_brasil = pd.crosstab(ipca_brasil['Mês (Código)'], ipca_brasil['Variável'
 
 #Datas para capturar  variação mais atual e anterior.
 
+
 data_referencia = dt.datetime.now()
 data_atual = data_referencia - relativedelta(months=1)
 data_anterior = data_referencia - relativedelta(months=2)
@@ -52,6 +49,14 @@ data_anterior = data_anterior.strftime('%Y/%m')
 ano_atual = dt.datetime.now().year
 meses_ano_atual = pd.date_range(start=f'{ano_atual}-01-01', end=f'{ano_atual}-12-01', freq='MS')
 df_vazio = pd.DataFrame(meses_ano_atual) #variável auxiliar para criar meses futuros no gráfico da variação acumulada.
+
+st.set_page_config(layout="wide", page_icon=":bar_chart:", page_title="Indicadores Econômicos")
+
+
+st.title('Indicadores Econômicos')
+st.subheader('**Inflação**')
+
+
 
 
 
